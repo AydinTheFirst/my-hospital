@@ -1,0 +1,165 @@
+import {
+  getKeyValue,
+  Input,
+  Select,
+  SelectItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+} from "@nextui-org/react";
+import { LucideSearch } from "lucide-react";
+import React, { Key, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useSWR from "swr";
+
+import { Doctor, Profession } from "@/types";
+
+const ViewProfessions = () => {
+  const navigate = useNavigate();
+
+  const [filteredItems, setFilteredItems] = useState<Profession[]>([]);
+  const { data: professions } = useSWR<Profession[]>("/professions");
+  const { data: doctors } = useSWR<Doctor[]>("/doctors");
+
+  useEffect(() => {
+    if (!professions) return;
+    setFilteredItems(professions);
+  }, [professions]);
+
+  const handleFilter = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toLowerCase();
+    if (!professions) return;
+
+    const filtered = professions.filter((profession) =>
+      profession.name.toLowerCase().includes(value),
+    );
+
+    setFilteredItems(filtered);
+  };
+
+  const handleSort = (type: string) => {
+    switch (type) {
+      case "date:asc":
+        setFilteredItems(
+          [...filteredItems].sort(
+            (a, b) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          ),
+        );
+        break;
+
+      case "date:desc":
+        setFilteredItems(
+          [...filteredItems].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          ),
+        );
+        break;
+
+      case "name:asc":
+        setFilteredItems(
+          [...filteredItems].sort((a, b) => a.name.localeCompare(b.name)),
+        );
+        break;
+
+      case "name:desc":
+        setFilteredItems(
+          [...filteredItems].sort((a, b) => b.name.localeCompare(a.name)),
+        );
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  const handleRowAction = (key: Key) => {
+    navigate(`/dashboard/professions/${key}`);
+  };
+
+  const columns = [
+    { key: "name", label: "Adı" },
+    { key: "createdAt", label: "Oluşturulma Tarihi" },
+  ];
+
+  const rows = filteredItems.map((profession) => {
+    return {
+      createdAt: new Date(profession.createdAt).toLocaleDateString(),
+      doctorLength: doctors
+        ? doctors.filter((doctor) => doctor.professionId === profession.id)
+            .length
+        : 0,
+      key: profession.id,
+      name: profession.name,
+    };
+  });
+
+  return (
+    <section className="grid gap-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="flex items-end justify-start gap-3">
+          <h2 className="text-2xl font-bold">Alanlar</h2>
+          <span className="text-sm text-gray-500">
+            ({filteredItems.length}/{professions?.length})
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Input
+            className="max-w-xs"
+            endContent={<LucideSearch />}
+            label="Ara"
+            onChange={handleFilter}
+            placeholder="Ara..."
+            variant="faded"
+          />
+          <Select
+            className="max-w-xs"
+            label="Sırala"
+            onSelectionChange={(keys) =>
+              handleSort(Array.from(keys)[0].toString())
+            }
+            placeholder="Sırala"
+            variant="faded"
+          >
+            <SelectItem key="date:asc">Tarihe Göre (Eskiden Yeniye)</SelectItem>
+            <SelectItem key="date:desc">
+              Tarihe Göre (Yeniden Eskiye)
+            </SelectItem>
+            <SelectItem key="name:asc">İsme Göre (A-Z)</SelectItem>
+            <SelectItem key="name:desc">İsme Göre (Z-A)</SelectItem>
+            <SelectItem key="email:asc">E-Postaya Göre (A-Z)</SelectItem>
+            <SelectItem key="email:desc">E-Postaya Göre (Z-A)</SelectItem>
+          </Select>
+        </div>
+      </div>
+
+      <Table
+        aria-label="Example table with dynamic content"
+        isStriped
+        onRowAction={handleRowAction}
+        selectionMode="single"
+      >
+        <TableHeader columns={columns}>
+          {(column) => (
+            <TableColumn key={column.key}>{column.label}</TableColumn>
+          )}
+        </TableHeader>
+        <TableBody items={rows}>
+          {(item) => (
+            <TableRow key={item.key}>
+              {(columnKey) => (
+                <TableCell>{getKeyValue(item, columnKey)}</TableCell>
+              )}
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </section>
+  );
+};
+
+export default ViewProfessions;
