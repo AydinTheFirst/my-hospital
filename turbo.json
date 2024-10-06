@@ -3,6 +3,7 @@
   "ui": "tui",
   "tasks": {
     "start": {
+      "dependsOn": ["^start", "db:generate"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"]
     },
     "build": {
