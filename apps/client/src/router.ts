@@ -17,6 +17,7 @@ export type Path =
   | `/dashboard/users/:userId`
   | `/login`
   | `/randevular`
+  | `/randevular/yeni`
   | `/register`;
 
 export type Params = {

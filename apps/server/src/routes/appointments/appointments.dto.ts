@@ -1,3 +1,5 @@
+import { PartialType } from "@nestjs/swagger";
+import { AppointmentStatus } from "@prisma/client";
 import { IsDateString, IsOptional, IsString } from "class-validator";
 
 export class CreateAppointmentDto {
@@ -18,7 +20,10 @@ export class CreateAppointmentDto {
   patientId: string;
 
   @IsString()
+  status: AppointmentStatus;
+
+  @IsString()
   title: string;
 }
 
-export class UpdateAppointmentDto extends CreateAppointmentDto {}
+export class UpdateAppointmentDto extends PartialType(CreateAppointmentDto) {}
