@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import useSWR from "swr";
 
 import { Appointment, Doctor, User } from "@/types";
+import { localeDate } from "@/utils";
 
 const ViewAppointments = () => {
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ const ViewAppointments = () => {
   const columns = [
     { key: "title", label: "Başlık" },
     { key: "date", label: "Tarih" },
-    { key: "time", label: "Saat" },
+    { key: "hour", label: "Saat" },
     { key: "doctor", label: "Doktor" },
     { key: "patient", label: "Hasta" },
   ];
@@ -102,11 +103,11 @@ const ViewAppointments = () => {
     );
 
     return {
-      date: new Date(appointment.date).toLocaleDateString(),
+      date: localeDate(appointment.date),
       doctor: doctor ? doctor.name : "Bilinmiyor",
+      hour: appointment.hour,
       key: appointment.id,
       patient: user ? `${user.firstName} ${user.lastName}` : "Bilinmiyor",
-      time: new Date(appointment.date).toLocaleTimeString(),
       title: appointment.title,
     };
   });

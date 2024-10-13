@@ -36,6 +36,11 @@ export class DoctorsController {
     return this.doctorsService.findOne(id);
   }
 
+  @Get(":id/calendar")
+  getCalendar(@Param("id") id: string) {
+    return this.doctorsService.getCalendar(id);
+  }
+
   @Delete(":id")
   @UseGuards(AuthGuard)
   @Roles(["ADMIN"])

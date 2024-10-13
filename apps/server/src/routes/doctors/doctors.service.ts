@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 
 import { PrismaService } from "@/prisma";
+import { DoctorCalendar, DoctorCalendarHour } from "@/types";
 
 import { CreateDoctorDto, UpdateDoctorDto } from "./doctors.dto";
 
@@ -33,6 +34,104 @@ export class DoctorsService {
   async findOne(id: string) {
     const doctor = await this.isExists(id);
     return doctor;
+  }
+
+  // ilerideki 1 ay için uygun saatleri bulmak için kullanılacak
+  async getCalendar(id: string) {
+    const doctor = await this.isExists(id);
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        doctorId: doctor.id,
+      },
+    });
+
+    const doctorCalendar: DoctorCalendar = [];
+
+    // loop through each day in the next month
+    // and check if the doctor is available and if there are no appointments and off dates
+    // 9 am to 5 pm
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setDate(now.getDate() + 30);
+
+    for (
+      const date = new Date();
+      date < endDate;
+      date.setDate(date.getDate() + 1)
+    ) {
+      const day = date.getDay();
+      const isWeekend = day === 0 || day === 6;
+      const isOffDate = doctor.offDates.find((offDate) => {
+        const offDateObj = new Date(offDate);
+        return offDateObj.toDateString() === date.toDateString();
+      });
+
+      if (isWeekend) {
+        continue;
+      }
+
+      const appointmentsOnDate = appointments.filter(
+        (appointment) =>
+          new Date(appointment.date).toDateString() ===
+          new Date(date).toDateString()
+      );
+
+      const availableHoursOnDate: DoctorCalendarHour[] = [];
+      const [startHour, endHour] = doctor.workingHours.split("-");
+
+      for (let hour = +startHour; hour < +endHour; hour++) {
+        const isAvailable = !appointmentsOnDate.some(
+          (appointment) => appointment.hour.split(":")[0] === hour.toString()
+        );
+
+        availableHoursOnDate.push({
+          hour: `${hour}:00`,
+          isAvailable,
+        });
+      }
+
+      doctorCalendar.push({
+        date: new Date(date),
+        hours: availableHoursOnDate,
+        isAvailable: !isOffDate,
+      });
+    }
+
+    console.log(doctorCalendar);
+
+    return doctorCalendar;
+  }
+
+  async isAvailable(id: string, date: Date, hour: string) {
+    const doctor = await this.isExists(id);
+
+    const doctorCalendar = await this.getCalendar(doctor.id);
+
+    const workingDay = doctorCalendar.find(
+      (workingDay) =>
+        new Date(workingDay.date).toDateString() ===
+        new Date(date).toDateString()
+    );
+
+    if (!workingDay) {
+      return false;
+    }
+
+    if (!workingDay.isAvailable) {
+      return false;
+    }
+
+    const workingHour = workingDay.hours.find(
+      (workingHour) => workingHour.hour === hour
+    );
+
+    if (workingHour && !workingHour.isAvailable) {
+      return false;
+    }
+
+    return true;
   }
 
   async isExists(id: string) {

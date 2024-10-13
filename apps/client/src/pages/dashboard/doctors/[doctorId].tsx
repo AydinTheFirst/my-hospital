@@ -3,6 +3,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  cn,
   Input,
   Select,
   SelectItem,
@@ -11,10 +12,10 @@ import {
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 
 import http from "@/http";
-import { Doctor, Profession, User } from "@/types";
+import { Doctor, DoctorCalendar, Profession, User } from "@/types";
 
 const ViewDoctor = () => {
   const navigate = useNavigate();
@@ -122,6 +123,14 @@ const ViewDoctor = () => {
               )}
             </Select>
 
+            <Input
+              className="col-span-12 md:col-span-6"
+              defaultValue={doctor?.workingHours || "9-17"}
+              isRequired
+              label="Çalışma Saatleri"
+              name="workingHours"
+            />
+
             <Textarea
               className="col-span-12"
               defaultValue={doctor?.bio || ""}
@@ -148,8 +157,147 @@ const ViewDoctor = () => {
           )}
         </CardBody>
       </Card>
+      {doctor && <AddDayOffs doctor={doctor} />}
+      {doctor && <AvailableTimes />}
     </section>
   );
 };
 
 export default ViewDoctor;
+
+const AddDayOffs = ({ doctor }: { doctor: Doctor }) => {
+  const { doctorId } = useParams<{ doctorId: string }>();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const data: Record<string, unknown> = Object.fromEntries(
+      formData.entries(),
+    );
+
+    try {
+      await http.patch(`/doctors/${doctorId}`, {
+        ...doctor,
+        offDates: Array.from(
+          new Set(
+            [
+              ...doctor.offDates,
+              new Date(data.date as string).toISOString(),
+            ].filter(Boolean),
+          ),
+        ),
+      });
+      toast.success("Tatil günü başarıyla eklendi!");
+      mutate(`/doctors/${doctorId}`);
+    } catch (error) {
+      http.handleError(error);
+    }
+  };
+
+  const deleteOffDate = async (date: string) => {
+    try {
+      await http.patch(`/doctors/${doctorId}`, {
+        ...doctor,
+        offDates: doctor.offDates.filter(
+          (offDate) => offDate.toString() !== date,
+        ),
+      });
+      toast.success("Tatil günü başarıyla silindi!");
+      mutate(`/doctors/${doctorId}`);
+    } catch (error) {
+      http.handleError(error);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <h3 className="text-2xl font-semibold">Tatil Günü Ekle</h3>
+      </CardHeader>
+      <CardBody>
+        <form className="grid grid-cols-12 gap-3" onSubmit={handleSubmit}>
+          <Input className="col-span-11" isRequired name="date" type="date" />
+          <Button
+            className="col-span-1"
+            color="primary"
+            fullWidth
+            type="submit"
+          >
+            Ekle
+          </Button>
+        </form>
+      </CardBody>
+      <CardBody className="grid gap-3">
+        {doctor.offDates.map((offDate, i) => (
+          <div className="flex items-center justify-between gap-3" key={i}>
+            <h4>
+              {new Date(offDate).toLocaleDateString("tr-TR", {
+                day: "numeric",
+                month: "long",
+                weekday: "long",
+                year: "numeric",
+              })}
+            </h4>
+            <Button
+              color="danger"
+              onClick={() => deleteOffDate(offDate.toString())}
+            >
+              Sil
+            </Button>
+          </div>
+        ))}
+      </CardBody>
+    </Card>
+  );
+};
+
+const AvailableTimes = () => {
+  const { doctorId } = useParams<{ doctorId: string }>();
+  const { data: doctorCalendar } = useSWR<DoctorCalendar>(
+    `/doctors/${doctorId}/calendar`,
+  );
+
+  if (!doctorCalendar) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <h3 className="text-2xl font-semibold">Uygun Saatler</h3>
+      </CardHeader>
+      <CardBody className="grid grid-cols-5 gap-3">
+        {doctorCalendar.map((availableTime, i) => (
+          <div key={i}>
+            <h4
+              className={cn(
+                "text-xl font-semibold",
+                availableTime.isAvailable ? "" : "text-red-500",
+              )}
+            >
+              {new Date(availableTime.date).toLocaleString("tr-TR", {
+                day: "numeric",
+                month: "long",
+                weekday: "long",
+                year: "numeric",
+              })}
+            </h4>
+            <ul className="mt-2 grid gap-2">
+              {availableTime.hours.map((hour, i) => (
+                <li
+                  className={
+                    hour.isAvailable && availableTime.isAvailable
+                      ? "text-green-500"
+                      : "text-red-500"
+                  }
+                  key={i}
+                >
+                  {hour.hour}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </CardBody>
+    </Card>
+  );
+};

@@ -1,14 +1,18 @@
-import { IsDateString, IsString } from "class-validator";
+import { IsDateString, IsOptional, IsString } from "class-validator";
 
 export class CreateAppointmentDto {
   @IsDateString()
-  date: string;
+  date: Date;
 
   @IsString()
+  @IsOptional()
   description: string;
 
   @IsString()
   doctorId: string;
+
+  @IsString()
+  hour: string;
 
   @IsString()
   patientId: string;

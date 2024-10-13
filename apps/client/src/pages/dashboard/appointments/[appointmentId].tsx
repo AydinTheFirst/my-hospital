@@ -93,6 +93,15 @@ const ViewAppointment = () => {
               type="date"
             />
 
+            <Input
+              className="col-span-12"
+              defaultValue={appointment?.hour}
+              isRequired
+              label="Saat"
+              name="hour"
+              type="time"
+            />
+
             <Select
               className="col-span-12"
               defaultSelectedKeys={[appointment?.doctorId || ""]}
@@ -110,7 +119,6 @@ const ViewAppointment = () => {
                 <SelectItem key="loading">Yükleniyor...</SelectItem>
               )}
             </Select>
-
             <Select
               className="col-span-12"
               defaultSelectedKeys={[appointment?.patientId || ""]}
@@ -132,7 +140,6 @@ const ViewAppointment = () => {
                 <SelectItem key="loading">Yükleniyor...</SelectItem>
               )}
             </Select>
-
             <Select
               className="col-span-12"
               defaultSelectedKeys={[appointment?.status || "pending"]}
@@ -148,15 +155,12 @@ const ViewAppointment = () => {
                 ),
               )}
             </Select>
-
             <Textarea
               className="col-span-12"
-              defaultValue={appointment?.description}
-              isRequired
+              defaultValue={appointment?.description || ""}
               label="Açıklama"
               name="description"
             />
-
             <Button
               className="col-span-12"
               color="primary"
